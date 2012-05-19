@@ -1,0 +1,7 @@
+#!/bin/sh
+/usr/sbin/rdate -s time.fu-berlin.de
+/etc/init.d/hostname.sh start
+/etc/init.d/ssh start
+/etc/init.d/lirc start
+/etc/rc.local
+/bin/bash

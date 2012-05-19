@@ -1,0 +1,105 @@
+#!/bin/sh
+#Debian PreInit Script for VIP1710
+#By LCB01
+#Parts of the script are based on the mediadistro scripts
+
+# copy nfs modules
+if [ ! -e /lib/libnsl.so.1 ]; then
+    cp /mnt/debboot/lib/libnsl.so.1 /lib/;
+fi
+
+if [ ! -e /lib/prevent-halserver-watchdog.so ]; then
+    cp /mnt/debboot/lib/prevent-halserver-watchdog.so /lib/;
+fi
+
+if [ ! -e /lib/modules/sunrpc.o ]; then
+    cp /mnt/debboot/lib/modules/sunrpc.o /lib/modules/;
+fi
+
+if [ ! -e /lib/modules/lockd.o ]; then
+    cp /mnt/debboot/lib/modules/lockd.o /lib/modules/;
+fi
+
+if [ ! -e /lib/modules/nfs.o ]; then
+    cp /mnt/debboot/lib/modules/nfs.o /lib/modules/;
+fi
+
+if [ ! -e /bin/portmap ]; then
+    cp /mnt/debboot/bin/portmap /bin/;
+fi
+
+if [ ! -e /bin/statd ]; then
+    cp /mnt/debboot/bin/statd /bin/;
+fi
+
+# copy lirc modules
+if [ ! -e /lib/modules/lirc_dev.o ]; then
+    cp /mnt/debboot/lib/modules/lirc_dev.o /lib/modules/;
+fi
+
+if [ ! -e /lib/modules/lirc_xilleon.o ]; then
+    cp /mnt/debboot/lib/modules/lirc_xilleon.o /lib/modules/;
+fi
+
+if [ ! -e /lib/modules/evdev.o ]; then
+    cp /mnt/debboot/lib/modules/evdev.o /lib/modules/;
+fi
+
+# remove ir-module from motorola-stack to load lirc-modules
+if [ "`lsmod | grep 08ir`" != "" ]; then
+    /sbin/rmmod 08ir;
+fi
+
+# insert lirc modules if not already done
+# (this could have been done by boot-menu)
+if [ "`lsmod | grep lirc`" = "" ]; then
+    /sbin/insmod lirc_dev >/dev/null
+    /sbin/insmod lirc_xilleon >/dev/null
+fi
+if [ "`lsmod | grep evdev`" = "" ]; then
+    /sbin/insmod evdev >/dev/null
+fi
+
+if [ "`mount | grep usbdevfs`" = "" ]; then
+    mount -t usbdevfs none /proc/bus/usb;
+fi
+
+# load the nfs modules
+/sbin/insmod sunrpc
+/sbin/insmod lockd
+/sbin/insmod nfs
+
+#debug
+/usr/sbin/telnetd
+
+# start halserver & link devnodes
+chmod +x /lib/prevent-halserver-watchdog.so
+touch /tmp/halsocketname
+LD_PRELOAD=/lib/prevent-halserver-watchdog.so /usr/bin/halserver -s /tmp/halsocketname &
+sleep 5;
+
+ln -s /dev/sound/kboxdsp /dev/dsp
+ln -s /dev/sound/kboxmixer /dev/mixer
+
+
+#Localboot
+#mount /dev/scsi/host0/bus0/target0/lun0/part1 /mnt -o remount,rw
+#mount -t proc proc /mnt/debian/proc
+#mount -o bind /dev /mnt/debian/dev
+#/usr/sbin/chroot /mnt/debian /init
+
+#nfsboot (comment localboot block & uncomment the following for nfs root)
+chmod +x /bin/portmap
+chmod +x /bin/statd
+/bin/portmap
+/bin/statd
+mkdir /nfs
+mount -t nfs 172.29.0.125:/var/nfsroot/mpd /nfs
+mount -t proc proc /nfs/proc
+mount -o bind /dev/ /nfs/dev/
+/usr/sbin/chroot /nfs /init
+
+
+
+
+

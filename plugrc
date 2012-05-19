@@ -1,0 +1,53 @@
+#!/bin/sh
+##########################################################
+# Please choose which start-method you'd like to use
+# with 'bootmenu' you get a menu where you can choose
+# what programms to be started (e.g. is the mediadistro,
+# vdr-client, or the motorola-stack). When prefering to
+# start without any boot-menu, you can set the following
+# variable to 'mediadistro' to start the internet radio
+# normally. Set the variable to 'default' to start the
+# motorola stack.
+STARTUP=bootmenu
+#STARTUP=debian
+#STARTUP=default
+
+
+#########################################################
+## NO CHANGES NEEDED AFTER HERE!                       ##
+#########################################################
+
+case ${STARTUP} in
+    bootmenu)
+        # copy files needed for bootmenu to root-dir
+        cp -R /mnt/bootmenu/usr /;
+        cp -R /mnt/bootmenu/etc /;
+
+        # load required modules
+        /mnt/bootmenu/modules.sh;
+
+        # start lirc
+        /usr/sbin/lircd -d /dev/lirc/0;
+
+        #start bootmenu
+        BM_OUT=`/usr/bin/bootmenu /etc/bootmenu.conf 2>/dev/null`;
+
+        case ${BM_OUT} in
+        	1)
+		# Taste 1 fuer Debian
+		killall -9 lircd;
+		/mnt/debboot/preinit;
+		;;
+		2)
+		# Taste 2 fuer Motorola Stack
+                killall -9 lircd;
+                /sbin/rmmod lirc_xilleon;
+                /sbin/rmmod lirc_dev;
+                /sbin/insmod 08kb;
+            ;;
+        esac
+    ;;
+	debian)
+		/mnt/debboot/preinit;
+	;;
+esac
